@@ -35,6 +35,11 @@ const orderSchema=mongoose.Schema({
         update_time:{type:String},//it's come from paypal
         email_address:{type:String}//it's paypal address what they used
     },
+    itemsPrice:{
+        type:Number,
+        required:true,
+        default:0.0 
+    },
     taxPrice:{
         type:Number,
         required:true,
