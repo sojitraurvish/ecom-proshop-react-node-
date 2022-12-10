@@ -1,24 +1,62 @@
 import {useEffect, useState} from "react"
+import axios from "axios"
 import { Link, useNavigate, useParams, useSearchParams} from "react-router-dom"
 import {Button,Row,Col,ListGroup,Image,Card, ButtonToolbar} from "react-bootstrap"
 import {useDispatch,useSelector} from "react-redux"
 import Message from "../component/Message"
 import { saveShippingAddress } from "../actions/cartActions"
 import Loader from "../component/Loader"
-import { getOrderDetails } from "../actions/orderActions"
+import { getOrderDetails, payOrder } from "../actions/orderActions"
+import {PayPalButton} from "react-paypal-button-v2"
+import { ORDER_PAY_RESET } from "../constants/orderConstants"
 
 const OrderScreen = () => {
     const navigate=useNavigate();
     const dispatch=useDispatch();
+    const [sdkReady,setSdkReady]=useState(false);
     const {id}=useParams();
     
+
     const {order,loading,error}=useSelector(state=>state.orderDetails)
+    const {loading:loadingPay,success:successPay}=useSelector(state=>state.orderPay)
 
-    useEffect(()=>{
-        dispatch(getOrderDetails(id))
-    },[])
+    // useEffect(() => {
+    //     if(!order || order._id !== orderId) {
+    //         dispatch(getOrderDefails(orderId))
+    //     }
+    // }, [order, orderId]) 
+    useEffect(() => {
+        const addPayPalScript=async()=>{
+            const {data:clientId}=await axios.get("/api/config/paypal")
+            const script=document.createElement("script")
+            script.type="text/javascript"
+            script.src=`https://www.paypal.com/sdk/js?client-id=${clientId}`
+            script.async=true
+            script.onload=()=>{
+                setSdkReady(true)
+            }
+            document.body.appendChild(script)
+        }
 
-    
+        addPayPalScript()
+
+        if(!order || successPay){
+            dispatch({type:ORDER_PAY_RESET})
+            dispatch(getOrderDetails(id))
+        }
+        else if(!order.isPaid){
+            if(!window.paypal){
+                addPayPalScript()
+            }else{
+                setSdkReady(true)
+            }
+        }
+    }, [id,successPay])
+
+    const successPaymentHandler=(paymentResult)=>{
+        console.log(paymentResult);
+        dispatch(payOrder(id,paymentResult))
+    }
 
   return (
     loading ? <Loader/> : error ? <Message variant="danger">{error}</Message>
@@ -31,24 +69,45 @@ const OrderScreen = () => {
                     <ListGroup.Item>
                         <h1>Shipping</h1>
                         <p>
-                            <strong>Address : </strong>
-                            {order.shippingAddress.address}, {order.shippingAddress.city+"-"}
-                            {order.shippingAddress.postalCode+" "},
-                            {order.shippingAddress.country}
+                            <strong>Name : </strong>{order[0].user.name}
+                        </p>
+                        <p>
+                            <strong>Email : </strong><a href={`mailto:${order[0].user.email}`}>{order[0].user.email}</a>
 
                         </p>
+                        <p>
+                            <strong>Address : </strong>
+                            {order[0].shippingAddress.address}, {order[0].shippingAddress.city+"-"}
+                            {order[0].shippingAddress.postalCode+" "},
+                            {order[0].shippingAddress.country}
+
+                        </p>
+                        {order.isDelivered 
+                        ?
+                        <Message variant="success">Delivered on {order[0].deliveredAt}</Message>
+                        :
+                        <Message variant="danger">Not Delivered</Message>
+                        }
                     </ListGroup.Item>
                     <ListGroup.Item>
                         <h2>Payment Method</h2>
-                        <strong>Method : </strong>
-                        {order.paymentMethod}
+                        <p>
+                            <strong>Method : </strong>
+                            {order[0].paymentMethod}
+                        </p>
+                        {order[0].isPaid 
+                        ?
+                        <Message variant="success">Paid on {order[0].paidAt}</Message>
+                        :
+                        <Message variant="danger">Not Paid</Message>
+                        }
                     </ListGroup.Item>
 
                     <ListGroup.Item>
                         <h2>Order Items:</h2>
-                        {order.orderItems.length===0 ? <Message>Order is empty</Message> : (
+                        {order[0].orderItems.length===0 ? <Message>Order is empty</Message> : (
                             <ListGroup variant="flush">
-                                {order.orderItems.map((item,index)=>(
+                                {order[0].orderItems.map((item,index)=>(
                                     <ListGroup.Item key={index}>
                                         <Row>
                                             <Col md={1}>
@@ -79,27 +138,35 @@ const OrderScreen = () => {
                         <ListGroup.Item>
                             <Row>
                                 <Col>Items</Col> 
-                                <Col>${order.itemsPrice}</Col>
+                                <Col>${order[0].itemsPrice}</Col>
                             </Row>
                         </ListGroup.Item>
                         <ListGroup.Item>
                             <Row>
                                 <Col>Shipping</Col> 
-                                <Col>${order.shippingPrice}</Col>
+                                <Col>${order[0].shippingPrice}</Col>
                             </Row>
                         </ListGroup.Item>
                         <ListGroup.Item>
                             <Row>
                                 <Col>Tax</Col> 
-                                <Col>${order.taxPrice}</Col>
+                                <Col>${order[0].taxPrice}</Col>
                             </Row>
                         </ListGroup.Item>
                         <ListGroup.Item>
                             <Row>
                                 <Col>Total</Col> 
-                                <Col>${order.totalPrice}</Col>
+                                <Col>${order[0].totalPrice}</Col>
                             </Row>
                         </ListGroup.Item>
+                        {!order[0].isPaid && (
+                            <ListGroup.Item>
+                                {loadingPay && <Loader/>}
+                                {!sdkReady ? <Loader/> : (
+                                    <PayPalButton amount={order[0].totalPrice} onSuccess={successPaymentHandler}/>
+                                )}
+                            </ListGroup.Item>
+                        )}
                     </ListGroup>
                 </Card>
             </Col>

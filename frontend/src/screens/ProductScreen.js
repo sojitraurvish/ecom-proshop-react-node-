@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link,useNavigate,useParams } from "react-router-dom";
 import { Row,Col,Image,ListGroup,Button,Card, ListGroupItem, Form } from "react-bootstrap";
 import Rating from "../component/Rating";
@@ -18,9 +18,9 @@ const ProductScreen=()=>{
 
     const {loading,error,product}=productDetails
 
-    useState(()=>{
+    useEffect(()=>{
        dispatch(listProductDetails(id))
-    },[dispatch,id]);
+    },[id]);
 
     const addToCartHandler=()=>{
         navigate(`/cart/${id}?qty=${qty}`)   
