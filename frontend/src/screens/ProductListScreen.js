@@ -29,9 +29,9 @@ const ProductListScreen = () => {
         }
 
         if(successCreate){
-            // dispatch({
-            //     type:PRODUCT_CREATE_RESET
-            // })
+            dispatch({
+                type:PRODUCT_CREATE_RESET
+            })
             navigate(`/admin/product/${createdProduct._id}/edit`)
         }
         else{
@@ -65,11 +65,11 @@ const ProductListScreen = () => {
                     </Button>
                 </Col>
             </Row>
-            {loadingDelete && <Loader/>}
+            {/* {(loadingDelete || loadingCreate) && <Loader/>} */}
             {errorDelete && <Message variant="danger">{errorDelete}</Message>}
-            {loadingCreate && <Loader/>}
+            {/* {loadingCreate && <Loader/>} */}
             {errorCreate && <Message variant="danger">{errorCreate}</Message>}
-            {loading ? <Loader/> : error ? <Message variant="danger">{error}</Message> : (
+            {(loadingDelete || loadingCreate || loading) ? <Loader/> : error ? <Message variant="danger">{error}</Message> : (
                 <Table striped bordered hover responsive className="table-sm">
                     <thead>
                         <tr>
