@@ -1,5 +1,5 @@
 import {useState,useEffect} from "react"
-import { Link, useNavigate, useParams, useSearchParams} from "react-router-dom"
+import { Link, useNavigate, useParams} from "react-router-dom"
 import {Form,Button} from "react-bootstrap"
 import {useDispatch,useSelector} from "react-redux"
 import Message from "../component/Message"
@@ -26,6 +26,7 @@ const ProductEditScreen = () => {
     const dispatch=useDispatch();
 
     const {loading,error,product}=useSelector(state=>state.productDetails)
+    const {userInfo}=useSelector(state=>state.user)
     const {loading:loadingUpdate,error:errorUpdate,success:successUpdate}=useSelector(state=>state.productUpdate)
     
     useEffect(()=>{
@@ -67,7 +68,9 @@ const ProductEditScreen = () => {
     }
 
     const uploadFileHandler=async(e)=>{
+        console.log("Fdsdfsd");
         const file=e.target.files[0]//this is array
+        console.log("Fdsdfsd"+file);
         const formData=new FormData()
         formData.append("image",file)
         setUploading(true)
@@ -75,12 +78,13 @@ const ProductEditScreen = () => {
         try {
             const config={
                 headers:{
-                    "Content-Type":"multipart/form-data"
+                    "Content-Type":"multipart/form-data",
+                    Authorization:`Bearer ${userInfo.token}`
                 }
             }
-
+            console.log("Fdsdfsd"+file);
             const {data}=await axios.post("/api/upload",formData,config)
-
+            console.log("Fdsdfsd"+data+file);
             setImage(data)
             setUploading(false)
         } catch (error) {
@@ -136,7 +140,8 @@ const ProductEditScreen = () => {
                     type="file" 
                     label="Choose File"
                     onChange={uploadFileHandler}
-                />
+                >
+                </Form.Control>
                 {uploading && <Loader/>}
             </Form.Group>
             <br/>
