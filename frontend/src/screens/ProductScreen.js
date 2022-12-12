@@ -3,27 +3,52 @@ import { Link,useNavigate,useParams } from "react-router-dom";
 import { Row,Col,Image,ListGroup,Button,Card, ListGroupItem, Form } from "react-bootstrap";
 import Rating from "../component/Rating";
 import { useDispatch,useSelector } from "react-redux";
-import { listProductDetails } from "../actions/productActions";
+import { listProductDetails,createProductReview } from "../actions/productActions";
 import Loader from "../component/Loader";
 import Message from "../component/Message";
-
+import { PRODUCT_CREATE_REVIEW_RESET } from "../constants/productConstants";
+import Meta from "../component/Meta";
 
 const ProductScreen=()=>{
     const [qty,setQty]=useState(1);
+    const [rating,setRating]=useState(0);
+    const [comment,setComment]=useState("");
+
     const navigate=useNavigate();
     const dispatch=useDispatch()
     // const params=useParams();
     const {id}=useParams();
-    const productDetails=useSelector(state=>state.productDetails)
+    const {loading,error,product}=useSelector(state=>state.productDetails)
+    const {userInfo}=useSelector(state=>state.user)
 
-    const {loading,error,product}=productDetails
+    const {
+        loading:loadingProductReview,
+        error:errorProductReview,
+        success:successProductReview
+    }=useSelector(state=>state.productReviewCreate)
+
+    
 
     useEffect(()=>{
+        if(successProductReview){
+            alert("Review Submitted!")
+            setRating(0)
+            setComment("")
+            dispatch({type:PRODUCT_CREATE_REVIEW_RESET})
+        }
        dispatch(listProductDetails(id))
-    },[id]);
+    },[id,successProductReview]);
 
     const addToCartHandler=()=>{
         navigate(`/cart/${id}?qty=${qty}`)   
+    }
+
+    const submitHandler=(e)=>{
+        e.preventDefault()
+        dispatch(createProductReview(id,{
+            rating,
+            comment
+        }))
     }
     
     //and this products coming form product.js file 
@@ -31,10 +56,13 @@ const ProductScreen=()=>{
     //This logic now sifted to backend and from their to database
     return (
         <>
+            
             <Link className="btn btn-dark my-3" to="/">
                 Go back
             </Link> 
             {loading ? (<Loader/>) : (error) ? (<Message variant="danger">{error}</Message>) : (
+                <>
+                <Meta title={product.name}/>
                  <Row>
                  <Col md={6}>
                      <Image src={product.image} alt={product.name} fluid/>
@@ -112,6 +140,60 @@ const ProductScreen=()=>{
                      </Card>
                  </Col>
              </Row>
+             <Row>
+                <Col md={6}>
+                    <h2>Reviews</h2>
+                    {product.reviews.length===0 && <Message>No Reviews</Message>}
+                    <ListGroup variant="flush">
+                        {product.reviews.map((review)=>(
+                            <ListGroup.Item key={review._id}  style={{backgroundColor:"#dddddd"}}>
+                                <strong>{review.name}</strong>
+                                <Rating value={review.rating}/>
+                                <p>{review.createdAt.substring(0,10)}</p>
+                                <p>{review.comment}</p>
+                            </ListGroup.Item>
+                        ))}
+                        <ListGroup.Item>
+                            <h2>Write a Customer Review</h2>
+                            {errorProductReview && (
+                                <Message variant="danger">{errorProductReview}</Message>
+                            )}
+                            {userInfo ? (
+                                <Form onSubmit={submitHandler}>
+                                    <Form.Group controlId="rating">
+                                        <Form.Label>Rating</Form.Label>
+                                        <Form.Control 
+                                            as="select" 
+                                            value={rating}
+                                            onChange={(e)=>setRating(e.target.value)}
+                                        >
+                                            <option value="">Select...</option>
+                                            <option value="1">1 - Poor</option>
+                                            <option value="2">2 - Fair</option>
+                                            <option value="3">3 - Good</option>
+                                            <option value="4">4 - Very Good</option>
+                                            <option value="5">5 - Excellent</option>
+                                        </Form.Control>
+                                    </Form.Group>
+                                    <Form.Group controlId="comment">
+                                        <Form.Label>Comment</Form.Label>
+                                        <Form.Control 
+                                            as="textarea" 
+                                            row="3" 
+                                            value={comment} 
+                                            onChange={(e)=>setComment(e.target.value)}
+                                        ></Form.Control>
+                                    </Form.Group>
+                                    <Button type="submit" variant="primary">
+                                        Submit
+                                    </Button>
+                                </Form>
+                            ) : <Message>Please <Link to="login">sign in</Link> to write a review</Message>}
+                        </ListGroup.Item>
+                    </ListGroup>
+                </Col>
+             </Row>
+             </>
             )}
            
         </>
